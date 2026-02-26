@@ -1,16 +1,20 @@
 import { ProfileUI } from '@ui-pages';
 import { FC, SyntheticEvent, useEffect, useState } from 'react';
+import { useSelector, useDispatch } from '@services/store';
+import { getUserInfo, getUserError, getIsUserPending } from '@selectors';
+import { requestUser, updateUser } from '@slices';
+import { TRegisterData } from '@utils/burger-api';
+import { Preloader } from '@ui';
 
 export const Profile: FC = () => {
-  /** TODO: взять переменную из стора */
-  const user = {
-    name: '',
-    email: ''
-  };
+  const dispatch = useDispatch();
+  const user = useSelector(getUserInfo);
+  const error = useSelector(getUserError);
+  const isLoading = useSelector(getIsUserPending);
 
   const [formValue, setFormValue] = useState({
-    name: user.name,
-    email: user.email,
+    name: user?.name || '',
+    email: user?.email || '',
     password: ''
   });
 
@@ -29,13 +33,28 @@ export const Profile: FC = () => {
 
   const handleSubmit = (e: SyntheticEvent) => {
     e.preventDefault();
+    const updateData: Partial<TRegisterData> = {};
+    if (formValue.name !== user?.name) {
+      updateData.name = formValue.name;
+    }
+    if (formValue.email !== user?.email) {
+      updateData.email = formValue.email;
+    }
+    if (formValue.password) {
+      updateData.password = formValue.password;
+    }
+    if (Object.keys(updateData).length > 0) {
+      dispatch(updateUser(updateData)).then(() => {
+        dispatch(requestUser());
+      });
+    }
   };
 
   const handleCancel = (e: SyntheticEvent) => {
     e.preventDefault();
     setFormValue({
-      name: user.name,
-      email: user.email,
+      name: user?.name || '',
+      email: user?.email || '',
       password: ''
     });
   };
@@ -47,6 +66,10 @@ export const Profile: FC = () => {
     }));
   };
 
+  if (isLoading) {
+    return <Preloader />;
+  }
+
   return (
     <ProfileUI
       formValue={formValue}
@@ -54,8 +77,7 @@ export const Profile: FC = () => {
       handleCancel={handleCancel}
       handleSubmit={handleSubmit}
       handleInputChange={handleInputChange}
+      updateUserError={error}
     />
   );
-
-  return null;
 };
