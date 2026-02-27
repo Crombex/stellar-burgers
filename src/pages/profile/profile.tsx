@@ -1,10 +1,12 @@
 import { ProfileUI } from '@ui-pages';
-import { FC, SyntheticEvent, useEffect, useState } from 'react';
+import { FC, useMemo } from 'react';
 import { useSelector, useDispatch } from '@services/store';
 import { getUserInfo, getUserError, getIsUserPending } from '@selectors';
 import { requestUser, updateUser } from '@slices';
-import { TRegisterData } from '@utils/burger-api';
+
 import { Preloader } from '@ui';
+import { useForm } from '@utils/hooks/form-hook';
+import { TUserForm } from '@utils-types';
 
 export const Profile: FC = () => {
   const dispatch = useDispatch();
@@ -12,63 +14,34 @@ export const Profile: FC = () => {
   const error = useSelector(getUserError);
   const isLoading = useSelector(getIsUserPending);
 
-  const [formValue, setFormValue] = useState({
-    name: user?.name || '',
-    email: user?.email || '',
-    password: ''
-  });
-
-  useEffect(() => {
-    setFormValue((prevState) => ({
-      ...prevState,
-      name: user?.name || '',
-      email: user?.email || ''
-    }));
-  }, [user]);
-
-  const isFormChanged =
-    formValue.name !== user?.name ||
-    formValue.email !== user?.email ||
-    !!formValue.password;
-
-  const handleSubmit = (e: SyntheticEvent) => {
-    e.preventDefault();
-    const updateData: Partial<TRegisterData> = {};
-    if (formValue.name !== user?.name) {
-      updateData.name = formValue.name;
-    }
-    if (formValue.email !== user?.email) {
-      updateData.email = formValue.email;
-    }
-    if (formValue.password) {
-      updateData.password = formValue.password;
-    }
-    if (Object.keys(updateData).length > 0) {
-      dispatch(updateUser(updateData)).then(() => {
-        dispatch(requestUser());
-      });
-    }
-  };
-
-  const handleCancel = (e: SyntheticEvent) => {
-    e.preventDefault();
-    setFormValue({
-      name: user?.name || '',
-      email: user?.email || '',
+  const initialForm: TUserForm = useMemo(
+    () => ({
+      name: user?.name ?? '',
+      email: user?.email ?? '',
       password: ''
-    });
-  };
+    }),
+    [user]
+  );
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormValue((prevState) => ({
-      ...prevState,
-      [e.target.name]: e.target.value
-    }));
-  };
-
-  if (isLoading) {
+  if (isLoading || !user) {
     return <Preloader />;
   }
+
+  const {
+    handleInputChange,
+    handleCancel,
+    handleSubmit,
+    formValue,
+    isFormChanged
+  } = useForm({
+    initialState: initialForm,
+    actions: {
+      submitAction: (data) =>
+        dispatch(updateUser(data)).then(() => {
+          dispatch(requestUser());
+        })
+    }
+  });
 
   return (
     <ProfileUI
