@@ -26,8 +26,7 @@ export const BurgerConstructor: FC = () => {
   const orderModalData = useSelector(getOrderResponse);
 
   const onOrderClick = () => {
-    if (!constructorItems.bun || constructorItems.ingredients.length === 0)
-      return;
+    if (!constructorItems.bun) return;
     if (!user) {
       navigate('/login');
       return;
