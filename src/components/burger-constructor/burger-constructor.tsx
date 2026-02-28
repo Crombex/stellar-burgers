@@ -5,7 +5,7 @@ import {
   getUserInfo,
   getBurgerConstructorBun,
   getBurgerConstructorIngredients,
-  getBurgerConstructorOrderRequest,
+  getOrderIsSending,
   getOrderResponse
 } from '@selectors';
 import { clearOrderResponse, createOrder } from '@slices';
@@ -21,12 +21,12 @@ export const BurgerConstructor: FC = () => {
     ingredients: useSelector(getBurgerConstructorIngredients)
   };
 
-  const orderRequest = useSelector(getBurgerConstructorOrderRequest);
+  const isOrderSending = useSelector(getOrderIsSending);
 
   const orderModalData = useSelector(getOrderResponse);
 
   const onOrderClick = () => {
-    if (!constructorItems.bun) return;
+    if (!constructorItems.bun || isOrderSending) return;
     if (!user) {
       navigate('/login');
       return;
@@ -53,7 +53,7 @@ export const BurgerConstructor: FC = () => {
   return (
     <BurgerConstructorUI
       price={price}
-      orderRequest={orderRequest}
+      orderRequest={isOrderSending}
       constructorItems={constructorItems}
       orderModalData={orderModalData}
       onOrderClick={onOrderClick}

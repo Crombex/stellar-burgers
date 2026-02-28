@@ -14,7 +14,7 @@ export const createOrder = createAsyncThunk(
 type TBurgerConstructorState = {
   ingredients: TConstructorIngredient[];
   bun: Omit<TConstructorIngredient, 'id'> | null;
-  orderRequest: boolean;
+  isOrderSending: boolean;
   error: string;
   orderResponse: Omit<TOrder, 'ingredients'> | null;
 };
@@ -23,7 +23,7 @@ const initialState: TBurgerConstructorState = {
   ingredients: [],
   bun: null,
   error: '',
-  orderRequest: false,
+  isOrderSending: false,
   orderResponse: null
 };
 
@@ -59,24 +59,24 @@ export const burgerConstructorSlice = createSlice({
     },
     clearOrderResponse: (state) => {
       state.orderResponse = null;
-      state.orderRequest = false;
+      state.isOrderSending = false;
     }
   },
   extraReducers: (builder) => {
     builder
       .addCase(createOrder.pending, (state) => {
-        state.orderRequest = true;
+        state.isOrderSending = true;
         state.error = '';
+      })
+      .addCase(createOrder.fulfilled, (state, action) => {
+        state.isOrderSending = false;
+        state.orderResponse = action.payload.order;
         state.ingredients = [];
         state.bun = null;
       })
-      .addCase(createOrder.fulfilled, (state, action) => {
-        state.orderRequest = false;
-        state.orderResponse = action.payload.order;
-      })
       .addCase(createOrder.rejected, (state, action) => {
         state.error = action.error.message ?? 'Ошибка при отправке заказа';
-        state.orderRequest = false;
+        state.isOrderSending = false;
       });
   }
 });
