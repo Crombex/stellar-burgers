@@ -37,4 +37,8 @@ export type TUser = {
   name: string;
 };
 
+export type TUserForm = TUser & {
+  password: string;
+};
+
 export type TTabMode = 'bun' | 'sauce' | 'main';

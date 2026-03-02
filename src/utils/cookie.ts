@@ -45,3 +45,13 @@ export function setCookie(
 export function deleteCookie(name: string) {
   setCookie(name, '', { expires: -1 });
 }
+
+export const saveTokens = (accessToken: string, refreshToken: string) => {
+  localStorage.setItem('refreshToken', refreshToken);
+  setCookie('accessToken', accessToken);
+};
+
+export const clearTokens = () => {
+  localStorage.removeItem('refreshToken');
+  setCookie('accessToken', '', { expires: -1 });
+};
