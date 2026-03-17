@@ -1,7 +1,7 @@
 import { requestFeed, feedSlice, feedInitialState } from '@slices';
 const feedReducer = feedSlice.reducer;
 
-describe('Тесты асинхронных экшенов ленты заказов', () => {
+describe('Получение ленты заказов (feedSlice)', () => {
   test('Экшен Pending', () => {
     const state = feedReducer(feedInitialState, requestFeed.pending(''));
 
@@ -52,7 +52,7 @@ describe('Тесты асинхронных экшенов ленты заказ
     expect(state.totalToday).toBe(fulfilledData.totalToday);
   });
 
-  test('Экшен Regected', () => {
+  test('Экшен Rejected', () => {
     const action = {
       type: requestFeed.rejected.type,
       payload: { message: 'Ошибка получения ленты заказов' }

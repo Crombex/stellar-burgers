@@ -5,7 +5,7 @@ import {
 } from '@slices';
 const ingredientsReducer = ingredientsSlice.reducer;
 
-describe('Тесты асинхронных экшенов каталога ингредиентов', () => {
+describe('Получение списка ингредиентов (ingredientsSlice)', () => {
   test('Экшен Pending', () => {
     const state = ingredientsReducer(
       ingredientsInitialState,
@@ -58,7 +58,7 @@ describe('Тесты асинхронных экшенов каталога ин
     expect(state.items).toEqual(fulfilledData);
   });
 
-  test('Экшен Regected', () => {
+  test('Экшен Rejected', () => {
     const action = {
       type: requestIngredients.rejected.type,
       payload: { message: 'Ошибка получения ингредиентов' }
