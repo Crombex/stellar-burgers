@@ -49,6 +49,16 @@ describe('Проверка модального окна', () => {
 })
 
 describe('Процесс сборки бургера с последующим оформлением заказа', () => {
+  before(() => {
+    cy.setCookie('accessToken', 'testAccessToken')
+    window.localStorage.setItem('refreshToken', 'testRefreshToken')
+  })
+
+  after(() => {
+    cy.clearCookie('accessToken')
+    window.localStorage.removeItem('refreshToken')
+  })
+
   it('Загружаем ингредиенты и отображаем их', () => {
     cy.wait('@requestIngredients')
 
