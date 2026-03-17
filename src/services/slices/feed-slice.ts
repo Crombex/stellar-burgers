@@ -1,26 +1,27 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { getFeedsApi } from '@api';
-import { TOrdersData } from '@utils-types';
+import { TOrdersData, TServerResponseError } from '@utils-types';
 
-export const requestFeed = createAsyncThunk(
-  'feed/fetchFeed',
-  async (_, { rejectWithValue }) => {
-    try {
-      const response = await getFeedsApi();
-      return response;
-    } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : 'Не удалось получить информацию с ленты заказов';
-      return rejectWithValue(message);
-    }
+export const requestFeed = createAsyncThunk<
+  TOrdersData,
+  void,
+  { rejectValue: TServerResponseError }
+>('feed/fetchFeed', async (_, { rejectWithValue }) => {
+  try {
+    const response = await getFeedsApi();
+    return response;
+  } catch (error) {
+    const message =
+      error instanceof Object && 'message' in (error as TServerResponseError)
+        ? (error as TServerResponseError)
+        : { message: 'Не удалось получить информацию с ленты заказов' };
+    return rejectWithValue(message);
   }
-);
+});
 
 type TFeedState = TOrdersData & {
   isPending: boolean;
-  error: string;
+  error: string | null;
 };
 
 const initialState: TFeedState = {
@@ -28,7 +29,7 @@ const initialState: TFeedState = {
   total: 0,
   totalToday: 0,
   isPending: false,
-  error: ''
+  error: null
 };
 
 export const feedSlice = createSlice({
@@ -38,7 +39,7 @@ export const feedSlice = createSlice({
   extraReducers: (builder) => {
     builder
       .addCase(requestFeed.pending, (state) => {
-        state.error = '';
+        state.error = null;
         state.isPending = true;
       })
       .addCase(
@@ -52,7 +53,11 @@ export const feedSlice = createSlice({
       )
       .addCase(requestFeed.rejected, (state, action) => {
         state.isPending = false;
-        state.error = action.payload as string;
+        state.error =
+          action.payload?.message ??
+          'Не удалось получить информацию с ленты заказов';
       });
   }
 });
+
+export { initialState as feedInitialState };

@@ -23,7 +23,7 @@ export const Login: FC = () => {
 
   return (
     <LoginUI
-      errorText={error}
+      errorText={error ?? undefined}
       email={email}
       setEmail={setEmail}
       password={password}

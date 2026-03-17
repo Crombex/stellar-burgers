@@ -41,4 +41,10 @@ export type TUserForm = TUser & {
   password: string;
 };
 
+export type TServerResponseError = {
+  message: string;
+  code?: number;
+  success?: boolean; // server returns idk why!
+};
+
 export type TTabMode = 'bun' | 'sauce' | 'main';

@@ -9,7 +9,7 @@ import { requestFeed } from '@slices';
 export const Feed: FC = () => {
   const orders: TOrder[] = useSelector(getFeedOrders);
   const isLoading: boolean = useSelector(getFeedIsPending);
-  const error: string = useSelector(getFeedError);
+  const error = useSelector(getFeedError);
   const dispatch = useDispatch();
 
   useEffect(() => {
