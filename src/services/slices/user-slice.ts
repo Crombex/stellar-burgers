@@ -11,7 +11,7 @@ import {
   refreshToken
 } from '@api';
 import { TOrder, TUser, TServerResponseError } from '@utils-types';
-import { saveTokens, clearTokens, getCookie } from '@utils/cookie';
+import { saveTokens, clearTokens } from '@utils/cookie';
 
 export const registerUser = createAsyncThunk<
   TUser,
@@ -199,7 +199,8 @@ export const userSlice = createSlice({
         state.isAuthChecked = true;
         state.user = null;
         state.userError =
-          action.payload?.message ?? 'Ошибка при получении истории заказов';
+          action.payload?.message ??
+          'Ошибка при получении информации о пользователе';
       })
       .addCase(updateUser.pending, (state) => {
         state.userPending = true;
@@ -212,7 +213,7 @@ export const userSlice = createSlice({
       .addCase(updateUser.rejected, (state, action) => {
         state.userError =
           action.payload?.message ??
-          'Ошибка при получении информации о пользователе';
+          'Ошибка при обновлении информации о пользователе';
         state.userPending = false;
       })
       .addCase(requestUserOrders.pending, (state) => {
@@ -226,8 +227,7 @@ export const userSlice = createSlice({
       .addCase(requestUserOrders.rejected, (state, action) => {
         state.ordersPending = false;
         state.ordersError =
-          action.payload?.message ??
-          'Ошибка при обновлении информации о пользователе';
+          action.payload?.message ?? 'Ошибка при получении истории заказов';
         state.orders = [];
       });
   }
