@@ -1,28 +1,42 @@
 import { createSlice, PayloadAction, createAsyncThunk } from '@reduxjs/toolkit';
-import { TConstructorIngredient, TIngredient, TOrder } from '@utils-types';
+import {
+  TConstructorIngredient,
+  TIngredient,
+  TOrder,
+  TServerResponseError
+} from '@utils-types';
 import { nanoid } from '@utils/nanoid';
-import { orderBurgerApi } from '@utils/burger-api';
+import { orderBurgerApi, TNewOrderResponse } from '@utils/burger-api';
 
-export const createOrder = createAsyncThunk(
-  'burgerConstructor/order',
-  async (data: TIngredient['_id'][]) => {
+export const createOrder = createAsyncThunk<
+  TNewOrderResponse,
+  TIngredient['_id'][],
+  { rejectValue: TServerResponseError }
+>('burgerConstructor/order', async (data, { rejectWithValue }) => {
+  try {
     const response = await orderBurgerApi(data);
     return response;
+  } catch (error) {
+    const message =
+      error instanceof Object && 'message' in (error as TServerResponseError)
+        ? (error as TServerResponseError)
+        : { message: 'Не удалось создать заказ' };
+    return rejectWithValue(message);
   }
-);
+});
 
 type TBurgerConstructorState = {
   ingredients: TConstructorIngredient[];
   bun: Omit<TConstructorIngredient, 'id'> | null;
   isOrderSending: boolean;
-  error: string;
+  error: string | null;
   orderResponse: Omit<TOrder, 'ingredients'> | null;
 };
 
 const initialState: TBurgerConstructorState = {
   ingredients: [],
   bun: null,
-  error: '',
+  error: null,
   isOrderSending: false,
   orderResponse: null
 };
@@ -31,9 +45,14 @@ export const burgerConstructorSlice = createSlice({
   name: 'burgerConstructor',
   initialState,
   reducers: {
-    addIngredient: (state, action: PayloadAction<TIngredient>) => {
-      const constructorIngredient = { ...action.payload, id: nanoid() };
-      state.ingredients.push(constructorIngredient);
+    addIngredient: {
+      reducer: (state, action: PayloadAction<TConstructorIngredient>) => {
+        state.ingredients.push(action.payload);
+      },
+      prepare: (ingredient: TIngredient) => {
+        const id = nanoid();
+        return { payload: { ...ingredient, id } };
+      }
     },
     setBun: (state, action: PayloadAction<TIngredient>) => {
       state.bun = action.payload;
@@ -66,7 +85,7 @@ export const burgerConstructorSlice = createSlice({
     builder
       .addCase(createOrder.pending, (state) => {
         state.isOrderSending = true;
-        state.error = '';
+        state.error = null;
       })
       .addCase(createOrder.fulfilled, (state, action) => {
         state.isOrderSending = false;
@@ -75,7 +94,7 @@ export const burgerConstructorSlice = createSlice({
         state.bun = null;
       })
       .addCase(createOrder.rejected, (state, action) => {
-        state.error = action.error.message ?? 'Ошибка при отправке заказа';
+        state.error = action.payload?.message ?? 'Не удалось создать заказ';
         state.isOrderSending = false;
       });
   }
@@ -88,3 +107,5 @@ export const {
   moveIngredient,
   clearOrderResponse
 } = burgerConstructorSlice.actions;
+
+export { initialState as burgerConstructorInitialState };

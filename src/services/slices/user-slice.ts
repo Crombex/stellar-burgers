@@ -7,20 +7,16 @@ import {
   updateUserApi,
   TLoginData,
   TRegisterData,
-  getOrdersApi
+  getOrdersApi,
+  refreshToken
 } from '@api';
-import { TOrder, TUser } from '@utils-types';
+import { TOrder, TUser, TServerResponseError } from '@utils-types';
 import { saveTokens, clearTokens } from '@utils/cookie';
-
-type TUserError = {
-  message: string;
-  code: number;
-};
 
 export const registerUser = createAsyncThunk<
   TUser,
   TRegisterData,
-  { rejectValue: string }
+  { rejectValue: TServerResponseError }
 >('user/register', async (data: TRegisterData, { rejectWithValue }) => {
   try {
     const response = await registerUserApi(data);
@@ -28,9 +24,9 @@ export const registerUser = createAsyncThunk<
     return response.user;
   } catch (error) {
     const message =
-      error instanceof Object && 'message' in (error as TUserError)
-        ? (error as TUserError).message
-        : 'Ошибка при регистрации';
+      error instanceof Object && 'message' in (error as TServerResponseError)
+        ? (error as TServerResponseError)
+        : { message: 'Ошибка при регистрации' };
     return rejectWithValue(message);
   }
 });
@@ -38,7 +34,7 @@ export const registerUser = createAsyncThunk<
 export const loginUser = createAsyncThunk<
   TUser,
   TLoginData,
-  { rejectValue: string }
+  { rejectValue: TServerResponseError }
 >('user/login', async (data: TLoginData, { rejectWithValue }) => {
   try {
     const response = await loginUserApi(data);
@@ -46,42 +42,43 @@ export const loginUser = createAsyncThunk<
     return response.user;
   } catch (error) {
     const message =
-      error instanceof Object && 'message' in (error as TUserError)
-        ? (error as TUserError).message
-        : 'Ошибка при входе в аккаунт';
+      error instanceof Object && 'message' in (error as TServerResponseError)
+        ? (error as TServerResponseError)
+        : { message: 'Ошибка при входе в аккаунт' };
     return rejectWithValue(message);
   }
 });
 
-export const logoutUser = createAsyncThunk<void, void, { rejectValue: string }>(
-  'user/logout',
-  async (_, { rejectWithValue }) => {
-    try {
-      await logoutApi();
-      clearTokens();
-    } catch (error) {
-      const message =
-        error instanceof Object && 'message' in (error as TUserError)
-          ? (error as TUserError).message
-          : 'Ошибка при выходе из аккаунта';
-      return rejectWithValue(message);
-    }
+export const logoutUser = createAsyncThunk<
+  void,
+  void,
+  { rejectValue: TServerResponseError }
+>('user/logout', async (_, { rejectWithValue }) => {
+  try {
+    await logoutApi();
+    clearTokens();
+  } catch (error) {
+    const message =
+      error instanceof Object && 'message' in (error as TServerResponseError)
+        ? (error as TServerResponseError)
+        : { message: 'Ошибка при выходе из аккаунта' };
+    return rejectWithValue(message);
   }
-);
+});
 
 export const requestUserOrders = createAsyncThunk<
   TOrder[],
   void,
-  { rejectValue: string }
+  { rejectValue: TServerResponseError }
 >('user/requestOrders', async (_, { rejectWithValue }) => {
   try {
     const response = await getOrdersApi();
     return response;
   } catch (error) {
     const message =
-      error instanceof Object && 'message' in (error as TUserError)
-        ? (error as TUserError).message
-        : 'Ошибка при получении истории заказов';
+      error instanceof Object && 'message' in (error as TServerResponseError)
+        ? (error as TServerResponseError)
+        : { message: 'Ошибка при получении истории заказов' };
     return rejectWithValue(message);
   }
 });
@@ -89,25 +86,33 @@ export const requestUserOrders = createAsyncThunk<
 export const requestUser = createAsyncThunk<
   TUser,
   void,
-  { rejectValue: string }
->('user/request', async () => {
-  const response = await getUserApi();
-  return response.user;
+  { rejectValue: TServerResponseError }
+>('user/request', async (_, { rejectWithValue }) => {
+  try {
+    const response = await getUserApi();
+    return response.user;
+  } catch (error) {
+    const message =
+      error instanceof Object && 'message' in error
+        ? (error as TServerResponseError)
+        : { message: 'Ошибка при получении информации о пользователе' };
+    return rejectWithValue(message);
+  }
 });
 
 export const updateUser = createAsyncThunk<
   TUser,
   Partial<TRegisterData>,
-  { rejectValue: string }
+  { rejectValue: TServerResponseError }
 >('user/update', async (data: Partial<TRegisterData>, { rejectWithValue }) => {
   try {
     const response = await updateUserApi(data);
     return response.user;
   } catch (error) {
     const message =
-      error instanceof Object && 'message' in (error as TUserError)
-        ? (error as TUserError).message
-        : 'Ошибка при обновлении информации о пользователе';
+      error instanceof Object && 'message' in (error as TServerResponseError)
+        ? (error as TServerResponseError)
+        : { message: 'Ошибка при обновлении информации о пользователе' };
     return rejectWithValue(message);
   }
 });
@@ -117,8 +122,9 @@ type TUserState = {
   ordersPending: boolean;
   userPending: boolean;
   user: TUser | null;
-  error: string;
+  userError: string | null;
   orders: TOrder[];
+  ordersError: string | null;
 };
 
 const initialState: TUserState = {
@@ -126,8 +132,9 @@ const initialState: TUserState = {
   ordersPending: false,
   userPending: true,
   user: null,
-  error: '',
-  orders: []
+  userError: null,
+  orders: [],
+  ordersError: null
 };
 
 export const userSlice = createSlice({
@@ -138,7 +145,7 @@ export const userSlice = createSlice({
     builder
       .addCase(registerUser.pending, (state) => {
         state.userPending = true;
-        state.error = '';
+        state.userError = null;
       })
       .addCase(registerUser.fulfilled, (state, action) => {
         state.userPending = false;
@@ -147,11 +154,11 @@ export const userSlice = createSlice({
       })
       .addCase(registerUser.rejected, (state, action) => {
         state.userPending = false;
-        state.error = action.payload as string;
+        state.userError = action.payload?.message ?? 'Ошибка при регистрации';
       })
       .addCase(loginUser.pending, (state) => {
         state.userPending = true;
-        state.error = '';
+        state.userError = null;
       })
       .addCase(loginUser.fulfilled, (state, action) => {
         state.isAuthChecked = true;
@@ -160,11 +167,12 @@ export const userSlice = createSlice({
       })
       .addCase(loginUser.rejected, (state, action) => {
         state.userPending = false;
-        state.error = action.payload as string;
+        state.userError =
+          action.payload?.message ?? 'Ошибка при входе в аккаунт';
       })
       .addCase(logoutUser.pending, (state) => {
         state.userPending = true;
-        state.error = '';
+        state.userError = null;
         state.isAuthChecked = false;
       })
       .addCase(logoutUser.fulfilled, (state) => {
@@ -173,11 +181,12 @@ export const userSlice = createSlice({
       })
       .addCase(logoutUser.rejected, (state, action) => {
         state.userPending = false;
-        state.error = action.payload as string;
+        state.userError =
+          action.payload?.message ?? 'Ошибка при выходе из аккаунта';
       })
       .addCase(requestUser.pending, (state) => {
         state.userPending = true;
-        state.error = '';
+        state.userError = null;
         state.isAuthChecked = false;
       })
       .addCase(requestUser.fulfilled, (state, action) => {
@@ -185,26 +194,31 @@ export const userSlice = createSlice({
         state.userPending = false;
         state.user = action.payload;
       })
-      .addCase(requestUser.rejected, (state) => {
+      .addCase(requestUser.rejected, (state, action) => {
         state.userPending = false;
         state.isAuthChecked = true;
         state.user = null;
+        state.userError =
+          action.payload?.message ??
+          'Ошибка при получении информации о пользователе';
       })
       .addCase(updateUser.pending, (state) => {
         state.userPending = true;
-        state.error = '';
+        state.userError = null;
       })
       .addCase(updateUser.fulfilled, (state, action) => {
         state.userPending = false;
         state.user = action.payload;
       })
       .addCase(updateUser.rejected, (state, action) => {
-        state.error = action.payload as string;
+        state.userError =
+          action.payload?.message ??
+          'Ошибка при обновлении информации о пользователе';
         state.userPending = false;
       })
       .addCase(requestUserOrders.pending, (state) => {
         state.ordersPending = true;
-        state.error = '';
+        state.ordersError = null;
       })
       .addCase(requestUserOrders.fulfilled, (state, action) => {
         state.ordersPending = false;
@@ -212,8 +226,11 @@ export const userSlice = createSlice({
       })
       .addCase(requestUserOrders.rejected, (state, action) => {
         state.ordersPending = false;
-        state.error = action.payload as string;
+        state.ordersError =
+          action.payload?.message ?? 'Ошибка при получении истории заказов';
         state.orders = [];
       });
   }
 });
+
+export { initialState as userInitialState };
